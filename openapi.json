@@ -1,0 +1,800 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "SiteSpec API",
+    "description": "**SiteSpec**: site design and hazard criteria for any US address, in one call. Seismic design values (ASCE 7-22 / 7-16), FEMA flood zone, IECC climate zone, NOAA design-storm rainfall, and wildfire exposure, combined from five US government sources. Each section reports its own status, so a slow source never blocks the rest.\n\nScreening data only: verify with a licensed professional and the local building department.",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/v1/site": {
+      "get": {
+        "tags": [
+          "Site"
+        ],
+        "summary": "Site report: seismic, flood, climate, rainfall, wildfire",
+        "description": "One call returns the site design and hazard criteria that normally take five separate lookups.\n\nAll data comes from US government sources; each section reports its own `status`, so a slow\nsource never blocks the rest. Provide an `address`, or `lat` and `lon`.",
+        "operationId": "site_report_v1_site_get",
+        "parameters": [
+          {
+            "name": "address",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 5,
+                  "maxLength": 200
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "US street address, e.g. `200 N Spring St, Los Angeles, CA`. Use this OR lat/lon.",
+              "title": "Address"
+            },
+            "description": "US street address, e.g. `200 N Spring St, Los Angeles, CA`. Use this OR lat/lon."
+          },
+          {
+            "name": "lat",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "maximum": 90,
+                  "minimum": -90
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Latitude (WGS84). Use with `lon`.",
+              "title": "Lat"
+            },
+            "description": "Latitude (WGS84). Use with `lon`."
+          },
+          {
+            "name": "lon",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "maximum": 180,
+                  "minimum": -180
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Longitude (WGS84). Use with `lat`.",
+              "title": "Lon"
+            },
+            "description": "Longitude (WGS84). Use with `lat`."
+          },
+          {
+            "name": "include",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Comma-separated sections to return. Fewer sections = faster. Options: seismic, flood, climate, rainfall, wildfire.",
+              "default": "seismic,flood,climate,rainfall,wildfire",
+              "title": "Include"
+            },
+            "description": "Comma-separated sections to return. Fewer sections = faster. Options: seismic, flood, climate, rainfall, wildfire."
+          },
+          {
+            "name": "seismic_reference",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "asce7-22",
+                "asce7-16"
+              ],
+              "type": "string",
+              "description": "Design standard for the seismic values.",
+              "default": "asce7-22",
+              "title": "Seismic Reference"
+            },
+            "description": "Design standard for the seismic values."
+          },
+          {
+            "name": "site_class",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "A",
+                "B",
+                "BC",
+                "C",
+                "CD",
+                "D",
+                "DE",
+                "E"
+              ],
+              "type": "string",
+              "description": "Soil site class. `D` is the standard default when soil is unknown. BC/CD/DE exist only in ASCE 7-22.",
+              "default": "D",
+              "title": "Site Class"
+            },
+            "description": "Soil site class. `D` is the standard default when soil is unknown. BC/CD/DE exist only in ASCE 7-22."
+          },
+          {
+            "name": "risk_category",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "I",
+                "II",
+                "III",
+                "IV"
+              ],
+              "type": "string",
+              "description": "Building risk category (II = typical buildings).",
+              "default": "II",
+              "title": "Risk Category"
+            },
+            "description": "Building risk category (II = typical buildings)."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SiteReport"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No matching US address found."
+          },
+          "422": {
+            "description": "Invalid input, or the coordinates are outside the United States."
+          },
+          "502": {
+            "description": "The address geocoder is not responding. Retry shortly, or send lat/lon."
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "tags": [
+          "Meta"
+        ],
+        "summary": "Liveness check",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Health Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ClimateSection": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "unavailable",
+              "not_applicable"
+            ],
+            "title": "Status",
+            "description": "`ok`, `unavailable` (source down, retry later) or `not_applicable` (no data for this place)."
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "iecc_climate_zone": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Iecc Climate Zone",
+            "description": "IECC climate zone 1 (hot) to 8 (subarctic)."
+          },
+          "iecc_moisture_regime": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "A",
+                  "B",
+                  "C"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Iecc Moisture Regime",
+            "description": "A = humid, B = dry, C = marine."
+          },
+          "building_america_zone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Building America Zone"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "source"
+        ],
+        "title": "ClimateSection"
+      },
+      "FloodSection": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "unavailable",
+              "not_applicable"
+            ],
+            "title": "Status",
+            "description": "`ok`, `unavailable` (source down, retry later) or `not_applicable` (no data for this place)."
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "mapped": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mapped",
+            "description": "`false` when no FEMA flood zone polygon covers the point (often unmapped or open water)."
+          },
+          "flood_zone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Flood Zone",
+            "description": "FEMA zone: A, AE, AH, AO, V, VE, X, D ..."
+          },
+          "zone_subtype": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zone Subtype"
+          },
+          "in_special_flood_hazard_area": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "In Special Flood Hazard Area",
+            "description": "`true` for the 1%-annual-chance floodplain, where flood insurance is mandatory for federally backed mortgages."
+          },
+          "base_flood_elevation_ft": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Flood Elevation Ft"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "source"
+        ],
+        "title": "FloodSection"
+      },
+      "Location": {
+        "properties": {
+          "query": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Query",
+            "description": "The address you sent, if any."
+          },
+          "matched_address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Matched Address",
+            "description": "The address as the US Census geocoder normalized it."
+          },
+          "latitude": {
+            "type": "number",
+            "title": "Latitude"
+          },
+          "longitude": {
+            "type": "number",
+            "title": "Longitude"
+          },
+          "state_fips": {
+            "type": "string",
+            "title": "State Fips"
+          },
+          "county_fips": {
+            "type": "string",
+            "title": "County Fips",
+            "description": "5-digit state+county FIPS code, e.g. `06037`."
+          },
+          "county_name": {
+            "type": "string",
+            "title": "County Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "latitude",
+          "longitude",
+          "state_fips",
+          "county_fips",
+          "county_name"
+        ],
+        "title": "Location"
+      },
+      "RainfallSection": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "unavailable",
+              "not_applicable"
+            ],
+            "title": "Status",
+            "description": "`ok`, `unavailable` (source down, retry later) or `not_applicable` (no data for this place)."
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "depth_inches": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "additionalProperties": {
+                    "type": "number"
+                  },
+                  "type": "object"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Depth Inches",
+            "description": "Design-storm rainfall depth in inches, keyed by duration then return period, e.g. `depth_inches['1h']['100yr']`."
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "source"
+        ],
+        "title": "RainfallSection"
+      },
+      "SeismicSection": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "unavailable",
+              "not_applicable"
+            ],
+            "title": "Status",
+            "description": "`ok`, `unavailable` (source down, retry later) or `not_applicable` (no data for this place)."
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference",
+            "description": "Design standard, e.g. `ASCE7-22`."
+          },
+          "site_class": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Class"
+          },
+          "risk_category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Risk Category"
+          },
+          "ss": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ss",
+            "description": "Mapped MCER spectral acceleration, short period (g)."
+          },
+          "s1": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "S1",
+            "description": "Mapped MCER spectral acceleration, 1-second period (g)."
+          },
+          "sms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sms"
+          },
+          "sm1": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sm1"
+          },
+          "sds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sds",
+            "description": "Design spectral acceleration, short period (g)."
+          },
+          "sd1": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sd1",
+            "description": "Design spectral acceleration, 1-second period (g). `null` when the standard requires a site-specific study."
+          },
+          "pga_m": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pga M",
+            "description": "Site-modified peak ground acceleration (g)."
+          },
+          "tl": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tl",
+            "description": "Long-period transition period (s)."
+          },
+          "seismic_design_category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seismic Design Category",
+            "description": "`null` when the standard requires a site-specific study (see `notes`)."
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Notes",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "source"
+        ],
+        "title": "SeismicSection"
+      },
+      "SiteReport": {
+        "properties": {
+          "location": {
+            "$ref": "#/components/schemas/Location"
+          },
+          "seismic": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SeismicSection"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "flood": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FloodSection"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "climate": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ClimateSection"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rainfall": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RainfallSection"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "wildfire": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WildfireSection"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "disclaimer": {
+            "type": "string",
+            "title": "Disclaimer",
+            "default": "Informational screening data compiled from US government sources. It is not a substitute for a site-specific study, an official flood determination, or the requirements of the local building department. Have a licensed professional verify values before design or insurance decisions."
+          }
+        },
+        "type": "object",
+        "required": [
+          "location"
+        ],
+        "title": "SiteReport"
+      },
+      "WildfireSection": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "unavailable",
+              "not_applicable"
+            ],
+            "title": "Status",
+            "description": "`ok`, `unavailable` (source down, retry later) or `not_applicable` (no data for this place)."
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "burn_probability_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Burn Probability Index",
+            "description": "USFS annual burn probability, as the raw scaled integer from the source raster (higher = more likely). 0 = none modeled."
+          },
+          "conditional_risk_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conditional Risk Index",
+            "description": "USFS conditional risk to potential structures, raw scaled integer (higher = worse outcome if a fire occurs)."
+          },
+          "any_modeled_risk": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Any Modeled Risk",
+            "description": "`true` if either index is above zero."
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "source"
+        ],
+        "title": "WildfireSection"
+      }
+    }
+  }
+}

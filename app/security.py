@@ -9,7 +9,8 @@ from app.config import Settings, get_settings
 
 def verify_rapidapi(
     settings: Annotated[Settings, Depends(get_settings)],
-    x_rapidapi_proxy_secret: Annotated[str | None, Header()] = None,
+    # include_in_schema=False: this header is set by RapidAPI's gateway, so customers must not see it in the docs.
+    x_rapidapi_proxy_secret: Annotated[str | None, Header(include_in_schema=False)] = None,
 ) -> None:
     if not settings.rapidapi_proxy_secret:
         return  # local dev: no secret configured

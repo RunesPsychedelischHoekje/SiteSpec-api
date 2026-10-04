@@ -25,7 +25,15 @@ def get_cache(request: Request) -> TTLCache:
     return request.app.state.cache
 
 
-@router.get("/site", summary="Site report: seismic, flood, climate, rainfall, wildfire")
+@router.get(
+    "/site",
+    summary="Site report: seismic, flood, climate, rainfall, wildfire",
+    responses={
+        404: {"description": "No matching US address found."},
+        422: {"description": "Invalid input, or the coordinates are outside the United States."},
+        502: {"description": "The address geocoder is not responding. Retry shortly, or send lat/lon."},
+    },
+)
 async def site_report(
     http: Annotated[httpx.AsyncClient, Depends(get_http)],
     cache: Annotated[TTLCache, Depends(get_cache)],
