@@ -1,0 +1,72 @@
+{
+ "result": {
+  "input": {
+   "address": {
+    "address": "200 N Spring St, Los Angeles, CA"
+   },
+   "vintage": {
+    "isDefault": true,
+    "id": "4",
+    "vintageName": "Current_Current",
+    "vintageDescription": "Current Vintage - Current Benchmark"
+   },
+   "benchmark": {
+    "isDefault": true,
+    "benchmarkDescription": "Public Address Ranges - Current Benchmark",
+    "id": "4",
+    "benchmarkName": "Public_AR_Current"
+   }
+  },
+  "addressMatches": [
+   {
+    "tigerLine": {
+     "side": "L",
+     "tigerLineId": "141618119"
+    },
+    "geographies": {
+     "Counties": [
+      {
+       "GEOID": "06037",
+       "CENTLAT": "+34.1959609",
+       "AREAWATER": 1784884136,
+       "STATE": "06",
+       "BASENAME": "Los Angeles",
+       "OID": "275901063468976",
+       "LSADC": "06",
+       "FUNCSTAT": "A",
+       "INTPTLAT": "+34.1963983",
+       "NAME": "Los Angeles County",
+       "OBJECTID": 2976,
+       "CENTLON": "-118.2618084",
+       "COUNTYCC": "H1",
+       "COUNTYNS": "00277283",
+       "AREALAND": 10516107376,
+       "INTPTLON": "-118.2618616",
+       "MTFCC": "G4020",
+       "COUNTY": "037"
+      }
+     ]
+    },
+    "coordinates": {
+     "x": -118.245593523439,
+     "y": 34.051622610747
+    },
+    "addressComponents": {
+     "zip": "90012",
+     "streetName": "SPRING",
+     "preType": "",
+     "city": "LOS ANGELES",
+     "preDirection": "S",
+     "suffixDirection": "",
+     "fromAddress": "200",
+     "state": "CA",
+     "suffixType": "ST",
+     "toAddress": "298",
+     "suffixQualifier": "",
+     "preQualifier": ""
+    },
+    "matchedAddress": "200 S SPRING ST, LOS ANGELES, CA, 90012"
+   }
+  ]
+ }
+}

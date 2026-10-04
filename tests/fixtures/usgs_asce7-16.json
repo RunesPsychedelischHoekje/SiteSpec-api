@@ -1,0 +1,84 @@
+{
+ "name": "ASCE7-16 Web Services",
+ "request": {
+  "referenceDocument": "ASCE7-16",
+  "status": "success",
+  "date": "2026-10-04T18:02:12Z",
+  "url": "https://earthquake.usgs.gov/ws/building-codes/asce7-16/calculate?latitude=34.05&longitude=-118.25&riskCategory=II&siteClass=D&title=sitespec",
+  "parameters": {
+   "title": "sitespec",
+   "riskCategory": "II",
+   "siteClass": "D",
+   "latitude": 34.05,
+   "longitude": -118.25
+  }
+ },
+ "response": {
+  "data": {
+   "tl": 8,
+   "t-sub-l": 8,
+   "pgam": 0.928,
+   "sms": 1.97,
+   "sm1": null,
+   "sds": 1.313,
+   "sd1": null,
+   "sdc": null,
+   "ss": 1.97,
+   "s1": 0.701,
+   "pgauh": 0.844,
+   "pgad": 0.998,
+   "pga": 0.844,
+   "fpga": 1.1,
+   "fpga_note": null,
+   "ssrt": 1.97,
+   "crs": 0.898,
+   "ssuh": 2.193,
+   "ssd": 2.467,
+   "fa": 1.0,
+   "fa_note": null,
+   "sdcs": "D",
+   "s1rt": 0.701,
+   "cr1": 0.898,
+   "s1uh": 0.781,
+   "s1d": 0.786,
+   "fv": null,
+   "fv_note": "See Section 11.4.8",
+   "sdc1": null,
+   "twoPeriodDesignSpectrum": [],
+   "twoPeriodMCErSpectrum": [],
+   "cv": 1.494,
+   "ts": 0.605,
+   "t0": 0.121,
+   "verticalDesignSpectrum": [],
+   "verticalMCErSpectrum": []
+  },
+  "metadata": {
+   "spatialInterpolationMethod": "linearloglinear",
+   "modelVersion": "v4.0.x",
+   "pgadPercentileFactor": 1.0,
+   "pgadFloor": 0.5,
+   "s1MaxDirFactor": 1.0,
+   "s1dFloor": 0.6,
+   "s1dPercentileFactor": 1.0,
+   "ssMaxDirFactor": 1.0,
+   "ssdFloor": 1.5,
+   "ssdPercentileFactor": 1.0
+  }
+ },
+ "metadata": {
+  "repositories": [
+   {
+    "projectName": "erp-design-ws",
+    "url": "https://code.usgs.gov/ghsc/erp/erp-design-ws.git",
+    "version": "1.2.2",
+    "gitHash": "66dbbb6e4358bef722e037e07b40deb3ab8a7083"
+   },
+   {
+    "projectName": "nshmp-utils-py",
+    "url": "https://code.usgs.gov/ghsc/nshmp/nshmp-utils-py",
+    "version": "1.3.0",
+    "gitHash": "82bbe7b36feb6a9e28686b3ee43dfa2d2af1d8c6"
+   }
+  ]
+ }
+}
