@@ -183,7 +183,7 @@ def test_address_not_found():
     [
         {},  # neither address nor coordinates
         {"lat": 34.0},  # lon missing
-        {"address": "200 N Spring St, Los Angeles", "lat": 34.0, "lon": -118.0},  # both
+        {"address": "200 N Spring St, Los Angeles", "lat": 34.0},  # lone lat, even with an address
         {"address": "200 N Spring St, Los Angeles", "include": "seismic,lava"},  # unknown section
         {"address": "200 N Spring St, Los Angeles", "seismic_reference": "asce7-16", "site_class": "BC"},
         {"address": "200 N Spring St, Los Angeles", "risk_category": "V"},
@@ -193,6 +193,41 @@ def test_address_not_found():
 def test_invalid_input_is_422(params):
     client = make_client(FakeUpstream())
     assert client.get("/v1/site", params=params).status_code == 422
+
+
+def test_coordinates_win_over_prefilled_address():
+    # The API playground pre-fills an example address; a user typing coordinates must still get theirs.
+    client = make_client(FakeUpstream())
+    body = client.get("/v1/site", params={**ADDRESS, "lat": 34.05, "lon": -118.25, "include": "climate"}).json()
+    assert body["location"]["query"] is None and body["location"]["matched_address"] is None
+
+
+@pytest.mark.parametrize("blank", ["{}", "", "null", "NaN", "undefined"])
+def test_console_placeholders_are_ignored(blank):
+    # RapidAPI's generated snippets send `lat={}&lon={}` for fields the user left empty.
+    client = make_client(FakeUpstream())
+    r = client.get("/v1/site", params={**ADDRESS, "lat": blank, "lon": blank, "include": "climate"})
+    assert r.status_code == 200
+    assert r.json()["location"]["matched_address"].startswith("200 S SPRING ST")
+
+
+def test_blank_everything_still_asks_for_a_location():
+    client = make_client(FakeUpstream())
+    assert client.get("/v1/site", params={"address": "{}", "lat": "{}", "lon": "{}"}).status_code == 422
+
+
+def test_openapi_is_console_friendly():
+    spec = TestClient(app).get("/openapi.json").json()
+    assert "/health" not in spec["paths"]
+    op = spec["paths"]["/v1/site"]["get"]
+    assert op["operationId"] == "get_site_report"
+    params = {p["name"]: p for p in op["parameters"]}
+    assert "x-rapidapi-proxy-secret" not in params
+    for name in ("lat", "lon", "address"):
+        s = params[name]["schema"]
+        assert "anyOf" not in s and "default" not in s  # no "number | null", no "Default: NaN"
+    assert params["lat"]["schema"]["type"] == "number"
+    assert params["address"]["example"] == "200 N Spring St, Los Angeles, CA"
 
 
 def test_rapidapi_proxy_secret_enforced():
